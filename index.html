@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dark Quest</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        body {
+            background-color: #0a0a0a;
+            color: white;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            position: fixed;
+            touch-action: manipulation;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(255,255,255,0.03) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(255,255,255,0.03) 0%, transparent 50%);
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 500px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        
+        .header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .counter {
+            font-size: 18px;
+            font-weight: bold;
+            color: rgba(255,255,255,0.9);
+            position: relative;
+            padding: 3px 0;
+        }
+        
+        .counter::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .counter.active {
+            animation: pulseOpacity 0.5s ease-out;
+        }
+        
+        .counter.active::after {
+            opacity: 1;
+        }
+        
+        .history-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            padding: 6px 12px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .history-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .question-container {
+            width: 100%;
+            margin-bottom: 30px;
+            position: relative;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+            perspective: 1000px;
+        }
+        
+        .question-container.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .question-box {
+            background: rgba(20,20,20,0.9);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 30px rgba(0,0,0,0.4);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(5px);
+            transform-style: preserve-3d;
+        }
+        
+        .question-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+            z-index: -1;
+        }
+        
+        .question-text {
+            font-size: 18px;
+            line-height: 1.5;
+            text-align: center;
+            margin-bottom: 0;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            background: linear-gradient(180deg, #fff, #ccc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .answers-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .answer-btn {
+            background: rgba(30,30,30,0.9);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 16px;
+            color: white;
+            font-size: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+            backdrop-filter: blur(5px);
+        }
+        
+        .answer-btn.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        
+        .answer-btn:nth-child(1).show {
+            transition-delay: 0.1s;
+        }
+        
+        .answer-btn:nth-child(2).show {
+            transition-delay: 0.2s;
+        }
+        
+        .answer-btn:nth-child(3).show {
+            transition-delay: 0.3s;
+        }
+        
+        .answer-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.05), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
+        }
+        
+        .answer-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            border-color: rgba(255,255,255,0.2);
+        }
+        
+        .answer-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+        
+        .answer-btn:hover::before {
+            transform: translateX(100%);
+        }
+        
+        .answer-btn.correct {
+            background: rgba(40, 160, 40, 0.3);
+            border-color: rgba(100, 255, 100, 0.3);
+            box-shadow: 0 0 20px rgba(100, 255, 100, 0.2);
+            color: #aaffaa;
+            animation: pulseCorrect 0.5s ease-out;
+        }
+        
+        .answer-btn.wrong {
+            background: rgba(160, 40, 40, 0.3);
+            border-color: rgba(255, 100, 100, 0.3);
+            box-shadow: 0 0 20px rgba(255, 100, 100, 0.2);
+            color: #ffaaaa;
+            animation: pulseWrong 0.3s ease-out;
+        }
+        
+        .history-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            z-index: 10;
+            padding: 20px;
+            overflow-y: auto;
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(255,255,255,0.03) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(255,255,255,0.03) 0%, transparent 50%);
+        }
+        
+        .history-container.show {
+            transform: translateX(0);
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 14px 15px;
+            background: rgba(20,20,20,0.9);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: rgba(255,255,255,0.3);
+            box-shadow: 0 0 15px rgba(255,255,255,0.1);
+        }
+        
+        .history-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.2) transparent;
+        }
+        
+        .history-list::-webkit-scrollbar {
+            width: 5px;
+        }
+        
+        .history-list::-webkit-scrollbar-thumb {
+            background-color: rgba(255,255,255,0.2);
+            border-radius: 5px;
+        }
+        
+        .history-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: rgba(20,20,20,0.7);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s;
+            backdrop-filter: blur(5px);
+        }
+        
+        .history-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border-color: rgba(255,255,255,0.2);
+        }
+        
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            margin-right: 15px;
+            object-fit: cover;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .user-info {
+            flex-grow: 1;
+        }
+        
+        .user-name {
+            font-weight: bold;
+            margin-bottom: 3px;
+            letter-spacing: 0.3px;
+        }
+        
+        .user-id {
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+        }
+        
+        .user-score {
+            font-weight: bold;
+            background: rgba(255,255,255,0.1);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .close-history {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            backdrop-filter: blur(5px);
+        }
+        
+        .close-history:hover {
+            background: rgba(255,255,255,0.2);
+            transform: rotate(90deg);
+        }
+        
+        .history-title {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 22px;
+            position: relative;
+            padding-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+        
+        .history-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 25%;
+            width: 50%;
+            height: 2px;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.5), transparent);
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5,5,5,0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 5;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .game-over.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .game-over-content {
+            max-width: 90%;
+            width: 100%;
+            background: rgba(20,20,20,0.8);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            transform: scale(0.9);
+            opacity: 0;
+            animation: fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.3s forwards;
+            backdrop-filter: blur(10px);
+        }
+        
+        .game-over-text {
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-align: center;
+            background: linear-gradient(180deg, #fff, #aaa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: 0.5px;
+        }
+        
+        .final-score {
+            font-size: 24px;
+            margin-bottom: 30px;
+            background: rgba(255,255,255,0.1);
+            padding: 12px 24px;
+            border-radius: 12px;
+            display: inline-block;
+            letter-spacing: 0.5px;
+        }
+        
+        .final-score span {
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .restart-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 12px;
+            padding: 14px 30px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .restart-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: all 0.6s;
+        }
+        
+        .restart-btn:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        
+        .restart-btn:hover::before {
+            left: 100%;
+        }
+        
+        .restart-btn:active {
+            transform: translateY(0);
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            margin-top: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.5s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: progressShine 2s infinite;
+        }
+        
+        /* Анимации */
+        @keyframes pulseOpacity {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 1; }
+        }
+        
+        @keyframes pulseCorrect {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(100, 255, 100, 0.4); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(100, 255, 100, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(100, 255, 100, 0); }
+        }
+        
+        @keyframes pulseWrong {
+            0% { transform: translateX(0); }
+            20% { transform: translateX(-5px); }
+            40% { transform: translateX(5px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+            100% { transform: translateX(0); }
+        }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        
+        @keyframes progressShine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0); }
+        }
+        
+        /* Адаптация для маленьких экранов */
+        @media (max-height: 650px) {
+            .question-text {
+                font-size: 16px;
+            }
+            
+            .answer-btn {
+                padding: 14px;
+                font-size: 15px;
+            }
+            
+            .counter {
+                font-size: 16px;
+                margin-bottom: 15px;
+            }
+            
+            .game-over-text {
+                font-size: 24px;
+            }
+            
+            .final-score {
+                font-size: 20px;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="counter">0/20</div>
+            <button class="history-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+                История
+            </button>
+        </div>
+        
+        <div class="question-container">
+            <div class="question-box">
+                <p class="question-text">Загрузка вопроса...</p>
+            </div>
+        </div>
+        
+        <div class="answers-container">
+            <button class="answer-btn">Ответ 1</button>
+            <button class="answer-btn">Ответ 2</button>
+            <button class="answer-btn">Ответ 3</button>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+        
+        <div class="game-over">
+            <div class="game-over-content">
+                <h2 class="game-over-text">Квест завершен!</h2>
+                <div class="final-score">Ваш результат: <span id="final-score">0</span>/20</div>
+                <button class="restart-btn">Начать заново</button>
+            </div>
+        </div>
+        
+        <div class="history-container">
+            <button class="close-history">&times;</button>
+            <h2 class="history-title">История прохождений</h2>
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="Поиск по ID...">
+            </div>
+            <div class="history-list">
+                <!-- История будет загружена здесь -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        // Запрет на закрытие при скролле
+        document.body.addEventListener('touchmove', function(e) {
+            if (e.target === document.body || e.target === document.documentElement) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // Вопросы и ответы
+        const questions = [
+            {
+                question: "Какое настоящее имя IamNotOst?",
+                answers: ["Evgeniy", "Kirill", "Alexander"],
+                correct: 0
+            },
+            {
+                question: "Сколько лет IamNotOst?",
+                answers: ["16", "15", "17"],
+                correct: 0
+            },
+            {
+                question: "Кто изначально помог IamNotOst стать тем, кто он есть сейчас?",
+                answers: ["Sazaki", "BGTalk", "Ba46"],
+                correct: 1
+            },
+            {
+                question: "В каком году IamNotOst начал играть в Blockman GO?",
+                answers: ["2017", "2019", "2018"],
+                correct: 2
+            },
+            {
+                question: "Какая дата рождения IamNotOst?",
+                answers: ["17 июля", "26 сентября", "12 декабря"],
+                correct: 1
+            },
+            {
+                question: "В какой стране живёт IamNotOst?",
+                answers: ["Россия", "Англия", "Китай"],
+                correct: 0
+            },
+            {
+                question: "Какой уровень VIP в BG у IamNotOst?",
+                answers: ["10+", "8", "9"],
+                correct: 1
+            },
+            {
+                question: "Какую социальную сеть IamNotOst использует чаще всего?",
+                answers: ["WeChat", " Discord", "Telegram"],
+                correct: 2
+            },
+            {
+                question: "Какой любимый режим в BG у IamNotOst?",
+                answers: ["Bed Wars", "Sky Block", "Нет любимого режима"],
+                correct: 0
+            },
+            {
+                question: "Кем является IamNotOst в игре Blockman GO?",
+                answers: ["Простой игрок", "Помощник разработчиков и строитель", "Разработчик и строитель"],
+                correct: 1
+            },
+            {
+                question: "Какой родной язык у IamNotOst?",
+                answers: ["Английский", "Китайский", "Русский"],
+                correct: 2
+            },
+            {
+                question: "Какой любимый цвет у IamNotOst?",
+                answers: ["Зеленый", "Нет любимого", "Синий"],
+                correct: 1
+            },
+            {
+                question: "Какой любимый BG-Tuber у IamNotOst?",
+                answers: ["PuteriPo", "Alexander14", "Нет любимого"],
+                correct: 2
+            },
+            {
+                question: "Что больше всего любит IamNotOst?",
+                answers: ["Мороженое", "Клубника", "Шоколад"],
+                correct: 0
+            },
+            {
+                question: "Какое счастливое число у IamNotOst?",
+                answers: ["2", "7", "5"],
+                correct: 1
+            },
+            {
+                question: "Какое время года предпочтительнее для IamNotOst?",
+                answers: ["Осень", "Лето", "Зима"],
+                correct: 1
+            },
+            {
+                question: "В какой первый режим Blockman GO поиграл IamNotOst?",
+                answers: ["Jail Break", "BedWars", " Sky Royale"],
+                correct: 1
+            },
+            {
+                question: "Какой смайлик IamNotOst чаще всего использует в сообщениях?",
+                answers: ["._.", ",_,", "🌝"],
+                correct: 0
+            },
+            {
+                question: "С кем IamNotOst построил первое лобби для BedWars?",
+                answers: ["Sazaki", "BGTalk", "Bembo"],
+                correct: 2
+            },
+            {
+                question: "Какого домашнего питомца IamNotOst любит больше всего?",
+                answers: ["Змея", "Котёнок", "Попугай"],
+                correct: 1
+            }
+        ];
+        
+        // Перемешивание вопросов
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+        
+        // Перемешивание ответов
+        function shuffleAnswers(question) {
+            const answers = [...question.answers];
+            const correctAnswer = answers[question.correct];
+            
+            // Перемешиваем ответы
+            for (let i = answers.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [answers[i], answers[j]] = [answers[j], answers[i]];
+            }
+            
+            // Находим новый индекс правильного ответа
+            const newCorrectIndex = answers.indexOf(correctAnswer);
+            
+            return {
+                question: question.question,
+                answers: answers,
+                correct: newCorrectIndex,
+                originalIndex: question.correct
+            };
+        }
+        
+        // Состояние игры
+        const gameState = {
+            currentQuestion: 0,
+            score: 0,
+            shuffledQuestions: [],
+            currentAnswers: [],
+            gameActive: true
+        };
+        
+        // DOM элементы
+        const elements = {
+            questionText: document.querySelector('.question-text'),
+            answerButtons: document.querySelectorAll('.answer-btn'),
+            counter: document.querySelector('.counter'),
+            questionContainer: document.querySelector('.question-container'),
+            answersContainer: document.querySelector('.answers-container'),
+            gameOverScreen: document.querySelector('.game-over'),
+            finalScore: document.getElementById('final-score'),
+            restartBtn: document.querySelector('.restart-btn'),
+            historyBtn: document.querySelector('.history-btn'),
+            historyContainer: document.querySelector('.history-container'),
+            closeHistoryBtn: document.querySelector('.close-history'),
+            searchInput: document.querySelector('.search-input'),
+            historyList: document.querySelector('.history-list'),
+            progressFill: document.querySelector('.progress-fill')
+        };
+        
+        // Инициализация игры
+        function initGame() {
+            gameState.currentQuestion = 0;
+            gameState.score = 0;
+            gameState.gameActive = true;
+            gameState.shuffledQuestions = shuffleArray([...questions]);
+            
+            updateCounter();
+            updateProgress();
+            showQuestion();
+            
+            // Скрыть экран завершения игры
+            elements.gameOverScreen.classList.remove('show');
+        }
+        
+        // Показать вопрос
+        function showQuestion() {
+            if (gameState.currentQuestion >= gameState.shuffledQuestions.length) {
+                endGame();
+                return;
+            }
+            
+            const currentQ = shuffleAnswers(gameState.shuffledQuestions[gameState.currentQuestion]);
+            gameState.currentAnswers = currentQ.answers;
+            
+            // Скрыть старый вопрос и ответы
+            elements.questionContainer.classList.remove('show');
+            elements.answerButtons.forEach(btn => {
+                btn.classList.remove('show', 'correct', 'wrong');
+                btn.style.pointerEvents = 'none';
+            });
+            
+            // Установить новый вопрос
+            setTimeout(() => {
+                elements.questionText.textContent = currentQ.question;
+                
+                // Установить новые ответы
+                elements.answerButtons.forEach((btn, index) => {
+                    btn.textContent = currentQ.answers[index];
+                    btn.dataset.correct = index === currentQ.correct;
+                });
+                
+                // Показать новый вопрос с анимацией
+                elements.questionContainer.classList.add('show');
+                
+                // Показать ответы с задержкой
+                setTimeout(() => {
+                    elements.answerButtons.forEach(btn => {
+                        btn.classList.add('show');
+                        btn.style.pointerEvents = 'auto';
+                    });
+                }, 200);
+            }, 400);
+        }
+        
+        // Обновление счетчика
+        function updateCounter() {
+            const counter = elements.counter;
+            counter.textContent = `${gameState.score}/20`;
+            
+            // Анимация изменения числа
+            counter.classList.add('active');
+            setTimeout(() => {
+                counter.classList.remove('active');
+            }, 1000);
+        }
+        
+        // Обновление прогресс-бара
+        function updateProgress() {
+            const progress = (gameState.currentQuestion / questions.length) * 100;
+            elements.progressFill.style.width = `${progress}%`;
+        }
+        
+        // Обработчик ответа
+        function handleAnswer(e) {
+            if (!gameState.gameActive) return;
+            
+            const selectedBtn = e.target;
+            const isCorrect = selectedBtn.dataset.correct === 'true';
+            
+            // Блокируем все кнопки
+            elements.answerButtons.forEach(btn => {
+                btn.style.pointerEvents = 'none';
+            });
+            
+            if (isCorrect) {
+                // Правильный ответ
+                selectedBtn.classList.add('correct');
+                gameState.score++;
+                updateCounter();
+                
+                // Перейти к следующему вопросу через 1 секунду
+                gameState.gameActive = false;
+                setTimeout(() => {
+                    gameState.currentQuestion++;
+                    updateProgress();
+                    gameState.gameActive = true;
+                    showQuestion();
+                }, 1000);
+            } else {
+                // Неправильный ответ
+                selectedBtn.classList.add('wrong');
+                
+                // Подсветить правильный ответ
+                elements.answerButtons.forEach(btn => {
+                    if (btn.dataset.correct === 'true') {
+                        btn.classList.add('correct');
+                    }
+                });
+                
+                // Конец игры
+                setTimeout(() => {
+                    endGame();
+                }, 1500);
+            }
+        }
+        
+        // Завершение игры
+        function endGame() {
+            gameState.gameActive = false;
+            elements.finalScore.textContent = gameState.score;
+            elements.gameOverScreen.classList.add('show');
+            
+            // Отправить результат на сервер
+            saveResult(gameState.score);
+        }
+        
+        // Сохранение результата
+        function saveResult(score) {
+            // Здесь должна быть логика сохранения результата
+            // Например, отправка на сервер через Telegram WebApp API
+            console.log(`Результат сохранен: ${score}`);
+            
+            // Для демонстрации просто добавим в историю
+            addToHistory({
+                id: tg.initDataUnsafe.user?.id || Math.floor(Math.random() * 1000000000).toString(),
+                first_name: tg.initDataUnsafe.user?.first_name || 'Аноним',
+                last_name: tg.initDataUnsafe.user?.last_name || 'Пользователь',
+                photo_url: tg.initDataUnsafe.user?.photo_url || '',
+                score: score
+            });
+        }
+        
+        // История прохождений
+        const historyData = [
+            { id: '5150476535', first_name: 'Админ', last_name: 'Тест', photo_url: '', score: 20 },
+            { id: '1234567890', first_name: 'Иван', last_name: 'Иванов', photo_url: '', score: 1 },
+            { id: '7777777777', first_name: 'Павел', last_name: 'Федоров', photo_url: '', score: 1 }
+        ];
+        
+        // Добавление в историю
+        function addToHistory(userData) {
+            // Проверяем, есть ли уже такой пользователь в истории
+            const existingIndex = historyData.findIndex(item => item.id === userData.id);
+            
+            if (existingIndex !== -1) {
+                // Обновляем существующую запись
+                historyData[existingIndex] = userData;
+            } else {
+                // Добавляем новую запись
+                historyData.unshift(userData);
+            }
+            
+            // Ограничиваем историю последними 10 записями
+            if (historyData.length > 10) {
+                historyData.pop();
+            }
+            
+            // Обновляем отображение истории
+            renderHistory();
+        }
+        
+        // Отображение истории
+        function renderHistory(filterId = '') {
+            elements.historyList.innerHTML = '';
+            
+            const filteredData = filterId 
+                ? historyData.filter(item => item.id.includes(filterId))
+                : historyData.slice(0, 10);
+            
+            if (filteredData.length === 0) {
+                elements.historyList.innerHTML = '<div style="text-align: center; padding: 20px; color: rgba(255,255,255,0.5)">Ничего не найдено</div>';
+                return;
+            }
+            
+            filteredData.forEach(user => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                
+                item.innerHTML = `
+                    <img src="${user.photo_url || 'https://via.placeholder.com/45'}" class="user-avatar" alt="Аватар">
+                    <div class="user-info">
+                        <div class="user-name">${user.first_name} ${user.last_name}</div>
+                        <div class="user-id">ID: ${user.id}</div>
+                    </div>
+                    <div class="user-score">${user.score}/20</div>
+                `;
+                
+                elements.historyList.appendChild(item);
+            });
+        }
+        
+        // Обработчики событий
+        elements.answerButtons.forEach(btn => {
+            btn.addEventListener('click', handleAnswer);
+        });
+        
+        elements.restartBtn.addEventListener('click', initGame);
+        
+        elements.historyBtn.addEventListener('click', () => {
+            elements.historyContainer.classList.add('show');
+            renderHistory();
+        });
+        
+        elements.closeHistoryBtn.addEventListener('click', () => {
+            elements.historyContainer.classList.remove('show');
+        });
+        
+        elements.searchInput.addEventListener('input', (e) => {
+            renderHistory(e.target.value);
+        });
+        
+        // Запуск игры при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            initGame();
+            
+            // Инициализация Telegram WebApp
+            if (tg.initDataUnsafe.user) {
+                console.log('Пользователь:', tg.initDataUnsafe.user);
+            }
+            
+            // Блокировка масштабирования
+            const viewport = document.querySelector('meta[name="viewport"]');
+            viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+            
+            // Блокировка скролла
+            document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
+        });
+    </script>
+</body>
+</html>
